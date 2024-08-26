@@ -51,7 +51,7 @@ There is not much building to be done. After getting the Python files, you can b
         pyinstaller --onefile --windows ComicDBConverter.py
 
 
-If you want both steps done automatically, I made a small batch file that does both, so you just have to call:
+If you want both steps done automatically, I made a small batch file that does both, so you just have to run:
 
         build.bat
 
@@ -63,7 +63,7 @@ If you want both steps done automatically, I made a small batch file that does b
 
 - The file **ComicDB.xml will never be changed**. There is no write action to the XML file.
 
-- The `ComicDBConverter` application will store the locations to the library and data files. So, once it has found your ComicDB.xml, you may never have to change that.
+- The `ComicDBConverter` application will store the locations to the library and data files. So, once it has found your ComicDB.xml and library.ydb, you may never have to change that.
 
 ### Disclaimer
 I wrote this tool out of a personal need. I have been using ComicRack a long time to organize and tag comics. Looking for another way of reading comics natively on iOS and Android, I stumbled upon YACLibraryReader. The reader is pretty good, but I was not willing to rescrape my library to get some basic info into YAC. That is when I started to write this little tool. It fits my need, and I use it always after I do an update on ComicRack. I am sharing this, since there may be other people that can use this. There is no support or guarantee, use at your own risk, however low the risk is.
