@@ -18,6 +18,10 @@ There are some options that can be set:
 
 The state of the Show Queries option is also set in the configuration file.
 
+
+![User Interface](screenshot.png)
+
+
 ### Data that will be updated in YAC Library
 The following data will be updated in the YAC library if the information is found in the ComicDB.xml file:
 
