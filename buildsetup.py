@@ -26,4 +26,4 @@ with open(filename, 'w') as file:
         # Als de versie niet bestond, voeg deze dan toe aan het einde van het bestand
         file.write(f'BUILD_DATUM = "{version}"\n')
 
-print(f'Builddatum bijgewerkt naar: {version}')
+print(f'Builddate updated to: {version}')

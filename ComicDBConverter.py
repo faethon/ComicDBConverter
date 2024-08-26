@@ -11,7 +11,7 @@ CONFIG_FILE = 'ComicDBConverter.ini'
 
 # Build datum wordt aangepast tijdens de build
 VERSION = "0.2"
-BUILD_DATUM = "2024.08.26.1347"
+BUILD_DATUM = "2024.08.26.1456"
 
 def expand_path(path):
     # Vervang eventuele %AppData% en andere environment variabelen in een pad.
@@ -19,10 +19,9 @@ def expand_path(path):
 
 def compress_path(path):
     # Vervang delen van het pad met bekende omgevingsvariabelen, zoals %AppData%.
-    for var in os.environ:
-        var_value = os.environ[var]
-        if path.startswith(var_value):
-            return path.replace(var_value, f"%{var}%")
+    appdata_path = os.environ.get('APPDATA')
+    if appdata_path and path.startswith(appdata_path):
+        return path.replace(appdata_path, '%AppData%')
     return path
 
 class MainApp:
@@ -94,12 +93,12 @@ class MainApp:
         self.overwrite_all = tk.BooleanVar(value=False)
 
         # Toevoegen van het vinkje aan de interface
-        self.overwrite_checkbutton = tk.Checkbutton(self.root, text="Overschrijf alle datavelden", variable=self.overwrite_all)
+        self.overwrite_checkbutton = tk.Checkbutton(self.root, text="Force overwrite all data", variable=self.overwrite_all)
         self.overwrite_checkbutton.grid(row=2, column=0, padx=10, pady=0, sticky="w")
 
         # Voeg een selectievakje toe voor query update logging
         self.verbose_var = tk.BooleanVar(value=self.verbose_bool)
-        self.verbose_checkbutton = tk.Checkbutton(self.root, text="Update queries weergeven", variable=self.verbose_var)
+        self.verbose_checkbutton = tk.Checkbutton(self.root, text="Show Update Queries", variable=self.verbose_var)
         self.verbose_checkbutton.grid(row=2, column=1, padx=10, pady=0, sticky="w")
 
         # Voeg een selectievakje toe voor debug logging
@@ -108,23 +107,23 @@ class MainApp:
         self.debug_checkbutton.grid(row=2, column=2, padx=20, pady=0, sticky="e")
 
         # Invoervelden en knoppen
-        tk.Label(self.root, text="YAC Database locatie:").grid(row=0, column=0, padx=10, pady=2, sticky="w")
+        tk.Label(self.root, text="YAC Database location:").grid(row=0, column=0, padx=10, pady=2, sticky="w")
         self.db_path_entry = tk.Entry(self.root, width=50)
         self.db_path_entry.insert(0, self.db_path)
         self.db_path_entry.grid(row=0, column=1, padx=10, pady=2, sticky="ew")
-        tk.Button(self.root, text="Bladeren...", command=self.browse_db).grid(row=0, column=2, padx=10, pady=2)
+        tk.Button(self.root, text="Browse...", command=self.browse_db).grid(row=0, column=2, padx=10, pady=2)
 
-        tk.Label(self.root, text="ComicDB.xml locatie:").grid(row=1, column=0, padx=10, pady=2, sticky="w")
+        tk.Label(self.root, text="ComicDB.xml location:").grid(row=1, column=0, padx=10, pady=2, sticky="w")
         self.xml_path_entry = tk.Entry(self.root, width=50)
         self.xml_path_entry.insert(0, self.xml_path)
         self.xml_path_entry.grid(row=1, column=1, padx=10, pady=2, sticky="ew")
-        tk.Button(self.root, text="Bladeren...", command=self.browse_xml).grid(row=1, column=2, padx=10, pady=2)
+        tk.Button(self.root, text="Browse...", command=self.browse_xml).grid(row=1, column=2, padx=10, pady=2)
 
         # De knop in het midden van de layout plaatsen
         button_frame = tk.Frame(self.root)
         button_frame.grid(row=3, column=0, pady=10)
 
-        script_button = tk.Button(button_frame, text="Update YAC met ComicInfo", command=self.run_CRtoYAC_conversion)
+        script_button = tk.Button(button_frame, text="Update YAC with ComicInfo", command=self.run_CRtoYAC_conversion)
         script_button.pack(expand=True)
 
         # Log tekstvak met scrollbars
@@ -165,10 +164,10 @@ class MainApp:
             converter.run()
 
         except Exception as e:
-            messagebox.showerror("Fout", f"Er is een fout opgetreden: {e}")
+            messagebox.showerror("Fout", f"There was an error: {e}")
 
     def browse_db(self):
-        """Open een bestandsdialoog voor het selecteren van de database en stel de initiële directory in op basis van de configuratie."""
+        # Open een bestandsdialoog voor het selecteren van de database en stel de initiële directory in op basis van de configuratie.
         # Verkrijg de opgeslagen database locatie uit de configuratie
         _, _, saved_db_path, _, _, _, _ = self.read_config()
         initial_dir = os.path.dirname(saved_db_path) if saved_db_path else ''
@@ -180,7 +179,7 @@ class MainApp:
             self.db_path_entry.insert(0, db_path)
 
     def browse_xml(self):
-        """Open een bestandsdialoog voor het selecteren van de XML-bestand en stel de initiële directory in op basis van de configuratie."""
+        # Open een bestandsdialoog voor het selecteren van de XML-bestand en stel de initiële directory in op basis van de configuratie.
         # Verkrijg de opgeslagen XML locatie uit de configuratie
         _, _, _, saved_xml_path, _, _, _ = self.read_config()
         

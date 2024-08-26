@@ -15,9 +15,7 @@ def remove_hidden_characters(text):
     return text.encode('ascii', 'ignore').decode('ascii')
 
 def combine_query_and_values(query, values):
-    """
-    Vervangt de vraagtekens in de SQL-query door de corresponderende waarden uit de values-lijst.
-    """
+    # Vervangt de vraagtekens in de SQL-query door de corresponderende waarden uit de values-lijst.
     for value in values:
         # Als de waarde een string is, zet deze tussen aanhalingstekens
         if isinstance(value, str):
@@ -103,17 +101,17 @@ class CRConverter:
     def connect_to_db(self):
         try:
             self.conn = sqlite3.connect(self.db_location)
-            self.logger.info("Verbonden met database.")
+            self.logger.info("Connected to the YAC database.")
         except sqlite3.Error as e:
-            self.logger.error(f"Fout bij het verbinden met database: {e}")
+            self.logger.error(f"Error while connecting to YAC database: {e}")
 
     def parse_xml(self):
         try:
             tree = ET.parse(self.xml_location)
             self.root = tree.getroot()
-            self.logger.info("XML-bestand succesvol geparsed.")
+            self.logger.info("ComicRack XML file parsed succesfully.")
         except ET.ParseError as e:
-            self.logger.error(f"Fout bij het parsen van de XML: {e}")
+            self.logger.error(f"Error while parsing XML file: {e}")
 
 
     def find_book_by_file(self, file_name):
@@ -122,13 +120,11 @@ class CRConverter:
             book_file = remove_hidden_characters(normalize_path(book.get('File')))
             if normalized_file_name in book_file:
                 return book
-        self.logger.debug(f"Geen XML boek gevonden voor {file_name}")
+        self.logger.debug(f"Did not find XML book entry for {file_name}")
         return None
 
     def construct_date(self, book):
-        """
-        Construeert een datumstring uit de jaar-, maand- en dagvelden.
-        """
+        # Construeert een datumstring uit de jaar-, maand- en dagvelden.
         # Begin met een lege datumstring
         date_str = None
 
@@ -170,7 +166,7 @@ class CRConverter:
 
             elif xml_field == 'Year':
                 xml_value = self.construct_date(book)
-                self.logger.debug(f"\t\t\t\tDatum samengesteld: {xml_value}")
+                self.logger.debug(f"\t\t\t\tDate constructed: {xml_value}")
             else:
                 xml_value = book.find(xml_field).text if book.find(xml_field) is not None else None
 
@@ -184,14 +180,14 @@ class CRConverter:
                     cursor.execute(f"SELECT {sql_field} FROM comic_info WHERE Id = ?", (comic_id,))
                     current_value = cursor.fetchone()
 
-                    self.logger.debug(f"\t\t\t\tHuidige waarde uit DB: {sql_field} = {current_value}")
+                    self.logger.debug(f"\t\t\t\tCurrent value in DB: {sql_field} = {current_value}")
 
                     if (update_flag == UPDATE_INDIEN_LEEG or update_flag == UPDATE_ALS_GEWIJZIGD) and (current_value is None or current_value[0] is None or current_value[0] == '' or current_value[0] == 0):
-                        self.logger.debug(f"\t\t\t\tHuidige waarde is leeg, toevoegen aan update query: {sql_field} = {xml_value}")
+                        self.logger.debug(f"\t\t\t\tCurrent value is empty, add to  update query: {sql_field} = {xml_value}")
                         fields_to_update.append(f"{sql_field} = ?")
                         update_values.append(xml_value)
                     elif update_flag == UPDATE_ALS_GEWIJZIGD and (current_value[0] != xml_value):
-                        self.logger.debug(f"\t\t\t\tHuidige aarde {current_value} is gewijzigd, toevoegen aan update query: {sql_field} = {xml_value}")
+                        self.logger.debug(f"\t\t\t\tCurrent value {current_value} is changed, add to update query: {sql_field} = {xml_value}")
                         fields_to_update.append(f"{sql_field} = ?")
                         update_values.append(xml_value)
 
@@ -204,16 +200,16 @@ class CRConverter:
                 query = combine_query_and_values(update_query, update_values)
                 self.logger.info(f"QUERY: {query}")
             elif self.verbose is False and self.log_level is logging.DEBUG:
-                self.logger.debug(f"\t\tUPDATE van DB: {update_query} met {update_values}")
+                self.logger.debug(f"\t\tUPDATE of DB: {update_query} met {update_values}")
 
             try:
                 cursor.execute(update_query, tuple(update_values))
                 self.conn.commit()
                 self.number_updated += 1
             except sqlite3.Error as e:
-                self.logger.error(f"Fout bij het updaten van de database: {e}")
+                self.logger.error(f"Error while updating the YAC database: {e}")
         else:
-            self.logger.debug(f"\t\tUPDATE: Geen waarden om bij te werken voor Id: {comic_id} van ({path})")
+            self.logger.debug(f"\t\tUPDATE: No values found for update of Id: {comic_id} at ({path})")
             self.number_nochange += 1
 
     def process_comics(self):
@@ -222,7 +218,7 @@ class CRConverter:
         comics = cursor.fetchall()
 
         total_comics = len(comics)
-        self.logger.info(f"Verwerken van {total_comics} comics...")
+        self.logger.info(f"Processing {total_comics} comics...")
         self.progress_bar['value'] = 0
         self.progress_bar['maximum'] = total_comics
         self.number_updated = 0
@@ -237,14 +233,14 @@ class CRConverter:
                 self.logger.debug(f"MATCH:  DB path: {path}, met Id {comic_id:>8} --- XML File: {xmlbook}")
                 self.update_comic_info(comic_id, book, path)
             else:
-                self.logger.warning(f"Geen ComicRack info gevonden voor ComicInfoId {comic_id:>8}: {path}")
+                self.logger.warning(f"No ComicRack info found for ComicInfoId {comic_id:>8}: {path}")
                 self.number_missing += 1
 
             # Update de voortgangsbalk
             self.progress_bar['value'] = index + 1
             self.progress_bar.update()
 
-        self.logger.info(f"Verwerking van {total_comics} comics voltooid, waarvan {self.number_nochange} ongewijzigd, {self.number_updated} aangepast, en {self.number_missing} niet in ComicRack gevonden.")
+        self.logger.info(f"Processing {total_comics} comics completed; {self.number_nochange} unchanged, {self.number_updated} updated, and {self.number_missing} not found ComicRack info.")
 
     def run(self):
         if not self.conn or not self.root:
