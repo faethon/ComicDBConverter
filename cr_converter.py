@@ -95,8 +95,6 @@ class CRConverter:
         # zet logging level
         self.logger.setLevel(self.log_level)
 
-        self.connect_to_db()
-        self.parse_xml()
 
     def connect_to_db(self):
         try:
@@ -243,6 +241,9 @@ class CRConverter:
         self.logger.info(f"Processing {total_comics} comics completed; {self.number_nochange} unchanged, {self.number_updated} updated, and {self.number_missing} not found ComicRack info.")
 
     def run(self):
+        self.connect_to_db()
+        self.parse_xml()
+       
         if not self.conn or not self.root:
             return
 
