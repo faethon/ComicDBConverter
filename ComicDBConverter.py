@@ -10,8 +10,8 @@ import os, logging
 CONFIG_FILE = 'ComicDBConverter.ini'
 
 # Build datum wordt aangepast tijdens de build
-VERSION = "0.2"
-BUILD_DATUM = "2024.08.26.1618"
+VERSION = "0.3"
+BUILD_DATUM = "2024.08.31.1639"
 
 def expand_path(path):
     # Vervang eventuele %AppData% en andere environment variabelen in een pad.
@@ -27,7 +27,7 @@ def compress_path(path):
 class MainApp:
     def __init__(self, root):
         self.root = root
-        self.width, self.height, self.db_path, self.xml_path, self.x_pos, self.y_pos, self.verbose_bool = self.read_config()
+        self.width, self.height, self.db_path, self.xml_path, self.x_pos, self.y_pos, self.verbose_bool, self.syncread_bool = self.read_config()
 
         # Zet venstergrootte en positie
         self.root.geometry(f'{self.width}x{self.height}+{self.x_pos}+{self.y_pos}')
@@ -52,14 +52,19 @@ class MainApp:
             verbose_bool = config.getboolean('Options', 'show_query', fallback=False)
         except Exception as e:
             verbose_bool = False
-        
-        return width, height, db_path, xml_path, x_pos, y_pos, verbose_bool
+
+        try:
+            syncread_bool = config.getboolean('Options', 'sync_read', fallback=False)
+        except Exception as e:
+            verbose_bool = False
+
+        return width, height, db_path, xml_path, x_pos, y_pos, verbose_bool, syncread_bool
 
     def save_config(self):
         config = configparser.RawConfigParser()
 
         # Haal de huidige waarden op uit de config (of standaardwaarden als ze er niet zijn)
-        _, _, old_db_path, old_xml_path, _, _, _ = self.read_config()
+        _, _, old_db_path, old_xml_path, _, _, _, _ = self.read_config()
 
         # Controleer of er een nieuwe waarde is geselecteerd, anders gebruik de oude
         new_db_path = self.db_path_entry.get() or old_db_path
@@ -78,7 +83,8 @@ class MainApp:
         }
 
         config['Options'] = {
-            'show_query': self.verbose_var.get()
+            'show_query': self.verbose_var.get(),
+            'sync_read': self.syncread_var.get()
         }
 
         with open(CONFIG_FILE, 'w') as configfile:
@@ -92,14 +98,25 @@ class MainApp:
         # Variabele voor het bijhouden van de status van het vinkje
         self.overwrite_all = tk.BooleanVar(value=False)
 
-        # Toevoegen van het vinkje aan de interface
-        self.overwrite_checkbutton = tk.Checkbutton(self.root, text="Force overwrite all data", variable=self.overwrite_all)
-        self.overwrite_checkbutton.grid(row=2, column=0, padx=10, pady=0, sticky="w")
+        # maak een frame voor de opties
+        options_frame = tk.Frame(self.root)
+        options_frame.grid(row=2, column=0, columnspan=3, pady=2, sticky="w")
+        options_frame.grid_rowconfigure(0, weight=1)
+        options_frame.grid_columnconfigure(0, weight=1)
+
+        # Voeg een selectievakje toe voor force update 
+        self.overwrite_checkbutton = tk.Checkbutton(options_frame, text="Force overwrite all data", variable=self.overwrite_all)
+        self.overwrite_checkbutton.grid(row=0, column=0, padx=10, pady=0, sticky="w")
 
         # Voeg een selectievakje toe voor query update logging
         self.verbose_var = tk.BooleanVar(value=self.verbose_bool)
-        self.verbose_checkbutton = tk.Checkbutton(self.root, text="Show Update Queries", variable=self.verbose_var)
-        self.verbose_checkbutton.grid(row=2, column=1, padx=10, pady=0, sticky="w")
+        self.verbose_checkbutton = tk.Checkbutton(options_frame, text="Show update queries", variable=self.verbose_var)
+        self.verbose_checkbutton.grid(row=0, column=1, padx=10, pady=0, sticky="w")
+
+        # Voeg een selectievakje toe voor synchronisatie van 'read' toestand
+        self.syncread_var = tk.BooleanVar(value=self.syncread_bool)
+        self.syncread_checkbutton = tk.Checkbutton(options_frame, text="Sync Read status to ComicRack", variable=self.syncread_var)
+        self.syncread_checkbutton.grid(row=0, column=2, padx=10, pady=0, sticky="w")
 
         # Voeg een selectievakje toe voor debug logging
         self.debug_var = tk.BooleanVar()
@@ -111,20 +128,20 @@ class MainApp:
         self.db_path_entry = tk.Entry(self.root, width=50)
         self.db_path_entry.insert(0, self.db_path)
         self.db_path_entry.grid(row=0, column=1, padx=10, pady=2, sticky="ew")
-        tk.Button(self.root, text="Browse...", command=self.browse_db).grid(row=0, column=2, padx=10, pady=2)
+        tk.Button(self.root, text="Browse...", command=self.browse_db).grid(row=0, column=2, padx=10, pady=2, sticky="ew")
 
         tk.Label(self.root, text="ComicDB.xml location:").grid(row=1, column=0, padx=10, pady=2, sticky="w")
         self.xml_path_entry = tk.Entry(self.root, width=50)
         self.xml_path_entry.insert(0, self.xml_path)
         self.xml_path_entry.grid(row=1, column=1, padx=10, pady=2, sticky="ew")
-        tk.Button(self.root, text="Browse...", command=self.browse_xml).grid(row=1, column=2, padx=10, pady=2)
+        tk.Button(self.root, text="Browse...", command=self.browse_xml).grid(row=1, column=2, padx=10, pady=2, sticky="ew")
 
         # De knop in het midden van de layout plaatsen
         button_frame = tk.Frame(self.root)
-        button_frame.grid(row=3, column=0, pady=10)
+        button_frame.grid(row=3, column=0, pady=2)
 
         script_button = tk.Button(button_frame, text="Update YAC with ComicInfo", command=self.run_CRtoYAC_conversion)
-        script_button.pack(expand=True)
+        script_button.pack(expand=True, padx=10, pady=2)
 
         # Log tekstvak met scrollbars
         log_frame = tk.Frame(self.root)
@@ -146,7 +163,7 @@ class MainApp:
 
         # Voeg een voortgangsbalk toe
         self.progress_bar = ttk.Progressbar(self.root, orient="horizontal", length=400, mode="determinate")
-        self.progress_bar.grid(row=3, column=1, columnspan=3, padx=10, pady=10, sticky="ew")
+        self.progress_bar.grid(row=3, column=1, columnspan=3, padx=10, pady=2, sticky="ew")
 
     def run_CRtoYAC_conversion(self):
         db_location = self.db_path_entry.get()
@@ -160,7 +177,7 @@ class MainApp:
                 log_level = logging.INFO
 
             # roep de data conversie van ComicInfoDB naar YAC aan
-            converter = CRConverter(db_location, xml_location, self.progress_bar, self.log_text, self.overwrite_all, log_level, self.verbose_var.get())
+            converter = CRConverter(db_location, xml_location, self.progress_bar, self.log_text, self.overwrite_all, log_level, self.verbose_var.get(), self.syncread_var.get())
             converter.run()
 
         except Exception as e:
@@ -169,7 +186,7 @@ class MainApp:
     def browse_db(self):
         # Open een bestandsdialoog voor het selecteren van de database en stel de initiële directory in op basis van de configuratie.
         # Verkrijg de opgeslagen database locatie uit de configuratie
-        _, _, saved_db_path, _, _, _, _ = self.read_config()
+        _, _, saved_db_path, _, _, _, _, _ = self.read_config()
         initial_dir = os.path.dirname(saved_db_path) if saved_db_path else ''
         
         # Open de dialoog en stel de initiële directory in
@@ -181,7 +198,7 @@ class MainApp:
     def browse_xml(self):
         # Open een bestandsdialoog voor het selecteren van de XML-bestand en stel de initiële directory in op basis van de configuratie.
         # Verkrijg de opgeslagen XML locatie uit de configuratie
-        _, _, _, saved_xml_path, _, _, _ = self.read_config()
+        _, _, _, saved_xml_path, _, _, _, _ = self.read_config()
         
         initial_dir = os.path.dirname(saved_xml_path) if saved_xml_path else ''
         

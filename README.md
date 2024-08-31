@@ -12,9 +12,10 @@ Using the filename as a reference may lead to not having any information updated
 The user interface allows you to select the location of the ComicDB.xml file and the YAClibrary. The ComicDB.xml file is usually located in the roaming data folder of your account. This is by default `%AppData%/cYo/ComicRack Community Edition/ComicDb.xml` assuming you use the Community Edition of ComicRack. The YACLibrary is by default located in a directory at the root of your YAC libary; '.yacreaderlibrary/library.ydp'. If you do not set these locations, the utility will fail. Once set, the locations are stored in the .ini file so that they are present when you open ComicDBConverter again at a later time.
 
 There are some options that can be set:
-1. **Force update:** will update and overwrite all fields in the database if information has been found
+1. **Force update:** will update and overwrite all fields in the database if information has been found.
 2. **Show Queries:** when this option is checked it will display which SQL queries will be run on the YAC database.
-3. **Debug:** shows extensive information for debugging purposes. This will give heaps of log information. This will obviously slow down the process.
+3. **Sync Read Status:** with this option checked, the Read status will be set in ComicDB.xml if a comic is completely read in YAC.
+4. **Debug:** shows extensive information for debugging purposes. This will give heaps of log information. This will obviously slow down the process.
 
 The state of the Show Queries option is also set in the configuration file.
 

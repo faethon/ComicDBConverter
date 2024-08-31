@@ -67,19 +67,22 @@ class CRConverter:
         'Year': ('Date', UPDATE_ALS_GEWIJZIGD)
     }
 
-    def __init__(self, db_location, xml_location, progress_bar=None, log_text=None, overwrite_all=None, log_level=logging.INFO, verbose=False):
+    def __init__(self, db_location, xml_location, progress_bar=None, log_text=None, overwrite_all=None, log_level=logging.INFO, verbose=False, syncread=False):
         self.db_location = db_location
         self.xml_location = xml_location
         self.conn = None
         self.root = None
+        self.tree = None
         self.progress_bar = progress_bar
         self.log_text = log_text
         self.overwrite_all = overwrite_all
         self.log_level = log_level
         self.verbose = verbose
+        self.syncread = syncread
         self.number_updated = 0
         self.number_missing = 0
         self.number_nochange = 0
+        self.number_syncread = 0
 
         # Setup logging
         self.logger = logging.getLogger(__name__)
@@ -105,8 +108,8 @@ class CRConverter:
 
     def parse_xml(self):
         try:
-            tree = ET.parse(self.xml_location)
-            self.root = tree.getroot()
+            self.tree = ET.parse(self.xml_location)
+            self.root = self.tree.getroot()
             self.logger.info("ComicRack XML file parsed succesfully.")
         except ET.ParseError as e:
             self.logger.error(f"Error while parsing XML file: {e}")
@@ -210,6 +213,33 @@ class CRConverter:
             self.logger.debug(f"\t\tUPDATE: No values found for update of Id: {comic_id} at ({path})")
             self.number_nochange += 1
 
+    def sync_read_status(self, comic_id, book, path):
+        # lees de 'Read' value in YAC
+        cursor = self.conn.cursor()
+        cursor.execute(f"SELECT read FROM comic_info WHERE Id = ?", (comic_id,))
+        current_value = cursor.fetchone()
+
+        if current_value is not None and current_value[0] == 1:
+            # check of in ComicRack status niet Read is
+            last_page_read = book.find('LastPageRead').text if book.find('LastPageRead') is not None else None
+            page_count = book.find('PageCount').text if book.find('PageCount') is not None else None
+
+            if last_page_read is None or (page_count is not None and int(page_count)-int(last_page_read) > 1):
+                self.logger.debug(f"READ in YAC, but ComicDB.XML page {last_page_read}/{page_count}: Update XML file for comic_id {comic_id}")
+
+                if last_page_read is not None:
+                    # update bestaande veld
+                    book.find('LastPageRead').text = str(int(page_count)-1)
+                    self.number_syncread += 1
+                else:
+                    # Voeg het veld toe als het niet bestaat
+                    new_last_page_read = ET.SubElement(book, 'LastPageRead')
+                    new_last_page_read.text = str(page_count)
+                    self.number_syncread += 1
+
+                self.logger.info(F"SYNC Read status in ComicRack DB for {path}")    
+                self.tree.write(self.xml_location, encoding='utf-8', xml_declaration=True)
+
     def process_comics(self):
         cursor = self.conn.cursor()
         cursor.execute("SELECT ComicInfoId, Path FROM comic")
@@ -222,6 +252,7 @@ class CRConverter:
         self.number_updated = 0
         self.number_missing = 0
         self.number_nochange = 0
+        self.number_syncread = 0
 
         for index, (comic_id, path) in enumerate(comics):
             book = self.find_book_by_file(path)
@@ -230,6 +261,11 @@ class CRConverter:
                 xmlbook = book.attrib['File']
                 self.logger.debug(f"MATCH:  DB path: {path}, met Id {comic_id:>8} --- XML File: {xmlbook}")
                 self.update_comic_info(comic_id, book, path)
+                
+                # sync read status naar ComicRack indien de optie aan staat
+                if self.syncread:
+                    self.sync_read_status(comic_id, book, path)
+
             else:
                 self.logger.warning(f"No ComicRack info found for ComicInfoId {comic_id:>8}: {path}")
                 self.number_missing += 1
@@ -238,7 +274,10 @@ class CRConverter:
             self.progress_bar['value'] = index + 1
             self.progress_bar.update()
 
-        self.logger.info(f"Processing {total_comics} comics completed; {self.number_nochange} unchanged, {self.number_updated} updated, and {self.number_missing} not found ComicRack info.")
+        self.logger.info(f"Processing {total_comics} comics completed; {self.number_nochange} unchanged, {self.number_updated} updated, and {self.number_missing} no ComicRack info found.")
+        if self.syncread:
+            self.logger.info(f"Synchronized read status for {self.number_syncread} comics in ComicRack.")
+        self.logger.info("All done!")
 
     def run(self):
         self.connect_to_db()
