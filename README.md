@@ -66,7 +66,7 @@ If you want both steps done automatically, I made a small batch file that does b
 
 - The file dialogs used to locate the `ComicDB.xml` and the `library.ydb` files does not allow to navigate to hidden directories. That means that you may not be able to easily find the ComicDB.xml file stored in the ComicRack program directory. However, you can put the path in the dialog yourself. So, if you navigate to the ComicDB.xml location in a file explorer, and copy the path into the dialog you are good to go. 
 
-- The file **ComicDB.xml will never be changed**. There is no write action to the XML file.
+- The file **ComicDB.xml will never be changed, unless Sync Read status is set**. There is no write action to the XML file. Of course, if you set to update the READ status in ComicDB.xml, this will be changed!
 
 - The `ComicDBConverter` application will store the locations to the library and data files. So, once it has found your ComicDB.xml and library.ydb, you may never have to change that.
 
