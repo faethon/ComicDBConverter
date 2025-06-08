@@ -102,7 +102,11 @@ class CRConverter:
     def connect_to_db(self):
         try:
             self.conn = sqlite3.connect(self.db_location)
-            self.logger.info("Connected to the YAC database.")
+            cursor = self.conn.cursor()
+            cursor.execute("SELECT ComicInfoId, Path FROM comic")
+            comics = cursor.fetchall()
+            total_comics = len(comics)
+            self.logger.info(f"Connected to the YAC database, contains {total_comics} comics.")
         except sqlite3.Error as e:
             self.logger.error(f"Error while connecting to YAC database: {e}")
 
@@ -110,7 +114,8 @@ class CRConverter:
         try:
             self.tree = ET.parse(self.xml_location)
             self.root = self.tree.getroot()
-            self.logger.info("ComicRack XML file parsed succesfully.")
+            total_comics = len(self.tree.findall('.//Book'))
+            self.logger.info(f"ComicRack XML file parsed succesfully, contains {total_comics} comics.")
         except ET.ParseError as e:
             self.logger.error(f"Error while parsing XML file: {e}")
 
@@ -246,7 +251,7 @@ class CRConverter:
         comics = cursor.fetchall()
 
         total_comics = len(comics)
-        self.logger.info(f"Processing {total_comics} comics...")
+        self.logger.info(f"Processing all {total_comics} comics from YAC...")
         self.progress_bar['value'] = 0
         self.progress_bar['maximum'] = total_comics
         self.number_updated = 0

@@ -10,8 +10,8 @@ import os, logging
 CONFIG_FILE = 'ComicDBConverter.ini'
 
 # Build datum wordt aangepast tijdens de build
-VERSION = "0.3"
-BUILD_DATUM = "2024.08.31.1639"
+VERSION = "0.3.1"
+BUILD_DATUM = "2025.06.08.2342"
 
 def expand_path(path):
     # Vervang eventuele %AppData% en andere environment variabelen in een pad.
