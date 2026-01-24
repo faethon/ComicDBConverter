@@ -40,9 +40,9 @@ The following data will be updated in the YAC library if the information is foun
     'CurrentPage': Set the current page (only if empty in YAC)
     'Read': Set 'Read' if issue is completely read in ComicRack (only if empty in YAC)
 
-For all fields above the value will only be updated in the YAC database if the corresponding value in the YAC library is different. Exception to this is the Read and CurrentPage value. This is only set in the YAC database if it is empty, it will by default not overwrite the value in YAC.
+For all fields above the value will only be updated in the YAC database if the corresponding value in the YAC library is different. Exception to this is the Read and CurrentPage value. This is only set in the YAC database if it is empty, it will by default not overwrite the value in YAC.  
 
-If you want to update all fields, overwriting current values, even if there is no change, you can set the tick box to update ALL fields. Then all fields will be updated in the YAC database.
+If you want to update all fields, even if there is no change, you can set the tick box **Force overwrite all data** to update ALL fields, except for CurrentPage. Then all fields will be updated in the YAC database. The value 'CurrentPage' is never overwritten, even when force overwrite all data is set.
 
 ### Building
 There is not much building to be done. After getting the Python files, you can build a Windows executable using pyinstaller. 
