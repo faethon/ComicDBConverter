@@ -2,7 +2,7 @@ import sqlite3
 import os
 import xml.etree.ElementTree as ET
 import logging
-import tkinter as tk  # Zorg ervoor dat tk wordt geïmporteerd
+import tkinter as tk  # Make sure tk is imported
 
 UPDATE_ALTIJD = 'UPDATE_ALTIJD'
 UPDATE_INDIEN_LEEG = 'UPDATE_INDIEN_LEEG'
@@ -15,9 +15,9 @@ def remove_hidden_characters(text):
     return text.encode('ascii', 'ignore').decode('ascii')
 
 def combine_query_and_values(query, values):
-    # Vervangt de vraagtekens in de SQL-query door de corresponderende waarden uit de values-lijst.
+    # Replaces the question marks in the SQL query with the corresponding values ​​from the values ​​list.
     for value in values:
-        # Als de waarde een string is, zet deze tussen aanhalingstekens
+        # If the value is a string, enclose it in quotes
         if isinstance(value, str):
             value = f"'{value}'"
         elif value is None:
@@ -25,7 +25,7 @@ def combine_query_and_values(query, values):
         else:
             value = str(value)
         
-        # Vervang het eerste vraagteken door de geformatteerde waarde
+        # Replace the first question mark with the formatted value
         query = query.replace('?', value, 1)
     return query
 
@@ -51,19 +51,44 @@ class GUIHandler(logging.Handler):
         self.text_widget.yview(tk.END)
 
 class CRConverter:
-    # lookup tabel, True: update alleen als leeg, False: altijd updaten.
+    # lookup table, True: update only if empty, False: always update.
     LOOKUP_TABLE = {
         'Title': ('Title', UPDATE_ALS_GEWIJZIGD),
         'Series': ('Series', UPDATE_ALS_GEWIJZIGD),
         'Volume': ('Volume', UPDATE_ALS_GEWIJZIGD),
         'Number': ('Number', UPDATE_ALS_GEWIJZIGD),
+        'Count': ('Count', UPDATE_ALS_GEWIJZIGD),
+        'StoryArc': ('StoryArc', UPDATE_ALS_GEWIJZIGD),
+        'Genre': ('Genere', UPDATE_ALS_GEWIJZIGD),
         'Writer': ('Writer', UPDATE_ALS_GEWIJZIGD),
         'Penciller': ('Penciller', UPDATE_ALS_GEWIJZIGD),
         'Inker': ('Inker', UPDATE_ALS_GEWIJZIGD),
+        'Colorist': ('Colorist', UPDATE_ALS_GEWIJZIGD),
+        'Letterer': ('Letterer', UPDATE_ALS_GEWIJZIGD),
+        'CoverArtist': ('CoverArtist', UPDATE_ALS_GEWIJZIGD),
+        'Editor': ('Editor', UPDATE_ALS_GEWIJZIGD),
         'Publisher': ('Publisher', UPDATE_ALS_GEWIJZIGD),
         'Imprint': ('Imprint', UPDATE_ALS_GEWIJZIGD),
+        'Format': ('Format', UPDATE_ALS_GEWIJZIGD),
+        'AgeRating': ('AgeRating', UPDATE_ALS_GEWIJZIGD),
+        'Characters': ('Characters', UPDATE_ALS_GEWIJZIGD),
+        'Teams': ('Teams', UPDATE_ALS_GEWIJZIGD),
+        'MainCharacterOrTeam': ('MainCharacterOrTeam', UPDATE_ALS_GEWIJZIGD),
+        'Locations': ('Locations', UPDATE_ALS_GEWIJZIGD),
+        'SeriesGroup': ('SeriesGroup', UPDATE_ALS_GEWIJZIGD),
+        'AlternateSeries': ('AlternateSeries', UPDATE_ALS_GEWIJZIGD),
+        'AlternateNumber': ('AlternateNumber', UPDATE_ALS_GEWIJZIGD),
+        'AlternateCount': ('AlternateCount', UPDATE_ALS_GEWIJZIGD),
+        'Summary': ('Synopsis', UPDATE_ALS_GEWIJZIGD),
+        'Notes': ('Notes', UPDATE_ALS_GEWIJZIGD),
+        'Review': ('Review', UPDATE_ALS_GEWIJZIGD),
+        'Tags': ('Tags', UPDATE_ALS_GEWIJZIGD),
+        'LanguageISO': ('LanguageISO', UPDATE_ALS_GEWIJZIGD),
+        'AgeRating': ('AgeRating', UPDATE_ALS_GEWIJZIGD),
+        'Rating': ('Rating', UPDATE_ALS_GEWIJZIGD),
+        'Manga': ('Manga', UPDATE_ALS_GEWIJZIGD),
         'CurrentPage': ('CurrentPage', UPDATE_INDIEN_LEEG),
-        'Read': ('Read', UPDATE_INDIEN_LEEG),    # schrijf de READ status alleen weg als de comic in ComicRack volledig is gelezen
+        'Read': ('Read', UPDATE_INDIEN_LEEG),  # Only write the READ status when the comic in ComicRack has been completely read.
         'Year': ('Date', UPDATE_ALS_GEWIJZIGD)
     }
 
@@ -88,14 +113,14 @@ class CRConverter:
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.INFO)
 
-        # check of er niet al een handler is geinstalleerd
+        # check if a handler is already installed
         if not self.logger.handlers:
             gui_handler = GUIHandler(log_text)
             formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
             gui_handler.setFormatter(formatter)
             self.logger.addHandler(gui_handler)
 
-        # zet logging level
+        # set logging level
         self.logger.setLevel(self.log_level)
 
 
@@ -129,22 +154,58 @@ class CRConverter:
         self.logger.debug(f"Did not find XML book entry for {file_name}")
         return None
 
+    def _get_int_tag(self, book, tag):
+        """Helper: Reads an XML tag as int; returns None if missing/invalid."""
+        elem = book.find(tag)
+        if elem is None or elem.text is None or elem.text.strip() == "":
+            return None
+        try:
+            return int(elem.text)
+        except ValueError:
+            return None
+
     def construct_date(self, book):
-        # Construeert een datumstring uit de jaar-, maand- en dagvelden.
-        # Begin met een lege datumstring
-        date_str = None
+        """
+        Combine Day/Month/Year from ComicDB.xml into YACReader format: D.M.YYYY.
+        - No leading zeros (e.g. 01 -> 1)
+        - Day and/or Month may be missing
+        """
+        year = self._get_int_tag(book, 'Year')
+        if year is None:
+            return None
+        month = self._get_int_tag(book, 'Month')
+        day = self._get_int_tag(book, 'Day')
 
-        year = book.find('Year').text if book.find('Year') is not None else None
-        if year is not None:
-            date_str = year
-            month = book.find('Month').text if book.find('Month') is not None else None
-            if month is not None:
-                date_str = f"{month}-{date_str}"
-                day = book.find('Day').text if book.find('Day') is not None else None
-                if day:
-                    date_str = f"{day}-{date_str}"
+        parts = []
+        if day:
+            parts.append(str(day))   # D
+        if month:
+            parts.append(str(month)) # M
+        parts.append(str(year))      # YYYY
+        return ".".join(parts)
 
-        return date_str
+    def extract_comicvine_id(self, book):
+        """
+        Searches <Tags> for a token 'CVDB<digits>' (case-insensitive) and
+        returns the number as int, or None if not found/invalid.
+        Examples that match:
+          - 'CVDB132453'
+          - 'Action, cvdb98765, Classic'
+        """
+        import re
+        tags_el = book.find('Tags')
+        if tags_el is None or tags_el.text is None:
+            return None
+        text = tags_el.text.strip()
+        if not text:
+            return None
+        m = re.search(r'\bCVDB\s*[-_:]*\s*(\d+)\b', text, flags=re.IGNORECASE)
+        if not m:
+            return None
+        try:
+            return int(m.group(1))
+        except ValueError:
+            return None
 
     def update_comic_info(self, comic_id, book, path):
         cursor = self.conn.cursor()
@@ -156,7 +217,7 @@ class CRConverter:
 
             self.logger.debug(f"\t\tParsing xml_field: {xml_field}")
 
-            # bepaal xml_value, verwerk eerst speciale cases van xml_field
+            # determine xml_value, first handle special cases of xml_field
             if xml_field == 'Read':
                 last_page_read = book.find('LastPageRead').text if book.find('LastPageRead') is not None else None
                 page_count = book.find('PageCount').text if book.find('PageCount') is not None else None
@@ -175,10 +236,18 @@ class CRConverter:
                 self.logger.debug(f"\t\t\t\tDate constructed: {xml_value}")
             else:
                 xml_value = book.find(xml_field).text if book.find(xml_field) is not None else None
-
-            # er is een xml_value bepaald voor het betreffende xml_field. 
-            if xml_value:
-                # Gebruik de overwrite_all variabele om te bepalen of altijd geüpdatet moet worden (uitgezonderd 'CurrentPage')
+            # Special case: when processing 'Tags', also try to extract ComicVineID from Tags.
+            extra_field = None
+            extra_value = None
+            if xml_field == 'Tags':
+                cv_id = self.extract_comicvine_id(book)
+                if cv_id is not None:
+                    extra_field = 'ComicVineID'
+                    extra_value = str(cv_id)
+                    self.logger.debug(f"\t\t\t\tComicVineID extracted from Tags: {extra_value}")
+            # an xml_value has been specified for the xml_field in question.
+            if xml_value is not None and xml_value != "":
+                # Use the overwrite_all variable to determine whether to always update (except 'CurrentPage')
                 if xml_field != 'CurrentPage' and (self.overwrite_all.get() or update_flag == UPDATE_ALTIJD):
                     fields_to_update.append(f"{sql_field} = ?")
                     update_values.append(xml_value)
@@ -189,13 +258,34 @@ class CRConverter:
                     self.logger.debug(f"\t\t\t\tCurrent value in DB: {sql_field} = {current_value}")
 
                     if (update_flag == UPDATE_INDIEN_LEEG or update_flag == UPDATE_ALS_GEWIJZIGD) and (current_value is None or current_value[0] is None or current_value[0] == '' or current_value[0] == 0):
-                        self.logger.debug(f"\t\t\t\tCurrent value is empty, add to  update query: {sql_field} = {xml_value}")
+                        self.logger.debug(f"\t\t\t\tCurrent value is empty, add to update query: {sql_field} = {xml_value}")
                         fields_to_update.append(f"{sql_field} = ?")
                         update_values.append(xml_value)
                     elif update_flag == UPDATE_ALS_GEWIJZIGD and (current_value[0] != xml_value):
                         self.logger.debug(f"\t\t\t\tCurrent value {current_value} is changed, add to update query: {sql_field} = {xml_value}")
                         fields_to_update.append(f"{sql_field} = ?")
                         update_values.append(xml_value)
+
+            if extra_field is not None:
+                if self.overwrite_all.get():
+                    # Force overwrite enabled: always update ComicVineID
+                    self.logger.debug(f"\t\t\t\tForce overwrite ON: set {extra_field} = {extra_value}")
+                    fields_to_update.append(f"{extra_field} = ?")
+                    update_values.append(extra_value)
+                else:
+                    # Empty-or-changed behavior (mirror UPDATE_ALS_GEWIJZIGD) with string normalization
+                    cursor.execute(f"SELECT {extra_field} FROM comic_info WHERE Id = ?", (comic_id,))
+                    current_value = cursor.fetchone()
+                    current_str = "" if current_value is None or current_value[0] is None else str(current_value[0]).strip()
+                    self.logger.debug(f"\t\t\t\tCurrent value in DB: {extra_field} = {current_str!r}")
+                    if current_str == "" or current_str == "0":
+                        self.logger.debug(f"\t\t\t\t{extra_field} empty -> set to {extra_value}")
+                        fields_to_update.append(f"{extra_field} = ?")
+                        update_values.append(extra_value)
+                    elif current_str != extra_value:
+                        self.logger.debug(f"\t\t\t\t{extra_field} changed ({current_str} -> {extra_value}) -> update")
+                        fields_to_update.append(f"{extra_field} = ?")
+                        update_values.append(extra_value)
 
         if fields_to_update:
             update_query += ", ".join(fields_to_update)
@@ -219,13 +309,13 @@ class CRConverter:
             self.number_nochange += 1
 
     def sync_read_status(self, comic_id, book, path):
-        # lees de 'Read' value in YAC
+        # read the 'Read' value in YAC
         cursor = self.conn.cursor()
         cursor.execute(f"SELECT read FROM comic_info WHERE Id = ?", (comic_id,))
         current_value = cursor.fetchone()
 
         if current_value is not None and current_value[0] == 1:
-            # check of in ComicRack status niet Read is
+            # check whether the status in ComicRack is not Read
             last_page_read = book.find('LastPageRead').text if book.find('LastPageRead') is not None else None
             page_count = book.find('PageCount').text if book.find('PageCount') is not None else None
 
@@ -233,16 +323,16 @@ class CRConverter:
                 self.logger.debug(f"READ in YAC, but ComicDB.XML page {last_page_read}/{page_count}: Update XML file for comic_id {comic_id}")
 
                 if last_page_read is not None:
-                    # update bestaande veld
+                    # update existing field
                     book.find('LastPageRead').text = str(int(page_count)-1)
                     self.number_syncread += 1
                 else:
-                    # Voeg het veld toe als het niet bestaat
+                    # Add the field if it doesn't exist
                     new_last_page_read = ET.SubElement(book, 'LastPageRead')
                     new_last_page_read.text = str(page_count)
                     self.number_syncread += 1
 
-                self.logger.info(F"SYNC Read status in ComicRack DB for {path}")    
+                self.logger.info(F"SYNC Read status in ComicRack DB for {path}")
                 self.tree.write(self.xml_location, encoding='utf-8', xml_declaration=True)
 
     def process_comics(self):
@@ -264,10 +354,10 @@ class CRConverter:
 
             if book is not None:
                 xmlbook = book.attrib['File']
-                self.logger.debug(f"MATCH:  DB path: {path}, met Id {comic_id:>8} --- XML File: {xmlbook}")
+                self.logger.debug(f"MATCH: DB path: {path}, met Id {comic_id:>8} --- XML File: {xmlbook}")
                 self.update_comic_info(comic_id, book, path)
                 
-                # sync read status naar ComicRack indien de optie aan staat
+                # sync read status to ComicRack if the option is enabled
                 if self.syncread:
                     self.sync_read_status(comic_id, book, path)
 
@@ -275,7 +365,7 @@ class CRConverter:
                 self.logger.warning(f"No ComicRack info found for ComicInfoId {comic_id:>8}: {path}")
                 self.number_missing += 1
 
-            # Update de voortgangsbalk
+            # Update the progress bar
             self.progress_bar['value'] = index + 1
             self.progress_bar.update()
 
