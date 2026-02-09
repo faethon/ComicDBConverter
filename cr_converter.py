@@ -57,7 +57,6 @@ class CRConverter:
         'Series': ('Series', UPDATE_ALS_GEWIJZIGD),
         'Volume': ('Volume', UPDATE_ALS_GEWIJZIGD),
         'Number': ('Number', UPDATE_ALS_GEWIJZIGD),
-        'Count': ('Count', UPDATE_ALS_GEWIJZIGD),
         'StoryArc': ('StoryArc', UPDATE_ALS_GEWIJZIGD),
         'Genre': ('Genere', UPDATE_ALS_GEWIJZIGD),
         'Writer': ('Writer', UPDATE_ALS_GEWIJZIGD),
