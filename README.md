@@ -26,16 +26,40 @@ The state of the Show Queries option is also set in the configuration file.
 ### Data that will be updated in YAC Library
 The following data will be updated in the YAC library if the information is found in the ComicDB.xml file:
 
-    'Title': Title of the issue
-    'Series': Series to which the issue belongs
-    'Volume': Volume of the series
-    'Number': Issue number
-    'Year': This wll add the coverdate of the issue
-    'Writer': Name of the author of the issue
-    'Penciller': Name of the artist of the issue
-    'Inker': Name of the colorist of the issue
-    'Publisher': Name of the publishing company
-    'Imprint': The imprint as part of the publisher
+    'Title'
+    'Series'
+    'Volume'
+    'Number'
+    'Year'
+    'StoryArc'
+    'Genre'
+    'Publisher'
+    'Imprint'
+    'Writer'
+    'Penciller'
+    'Inker'
+    'Colorist'
+    'Letterer'
+    'CoverArtist'
+    'Editor'
+    'Format'
+    'AgeRating'
+    'Characters'
+    'Teams'
+    'MainCharacterOrTeam'
+    'Locations'
+    'SeriesGroup'
+    'AlternateSeries'
+    'AlternateNumber'
+    'AlternateCount'
+    'Summary'
+    'Notes'
+    'Review'
+    'Tags'
+    'LanguageISO'
+    'AgeRating'
+    'Rating'
+    'Manga'
 
     'CurrentPage': Set the current page (only if empty in YAC)
     'Read': Set 'Read' if issue is completely read in ComicRack (only if empty in YAC)
